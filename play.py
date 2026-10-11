@@ -8,7 +8,7 @@ import numpy as np
 import pygame
 
 from game import sim as S, track as T
-from game.render import View, DIM
+from game.render import View
 
 track = T.load(sys.argv[1] if len(sys.argv) > 1 else T.TRAINING[0])
 view = View(f"Car AI Race: {track.name}")
@@ -29,11 +29,10 @@ while not view.closed():
 
     view.track(track)
     if sim.live[0]:
-        view.sensors(sim, 0)
-    view.cars(sim, [(230, 70, 60)])
-    state = "FINISHED" if sim.finished[0] else "" if sim.alive[0] else "CRASHED"
-    view.text([f"{sim.time[0]:.2f} s    {sim.speed[0]:.0f} px/s    {sim.progress[0]:.0%}",
-               (f"best lap {best:.2f} s" if best else "arrows to drive, R to restart", DIM)])
-    if state:
-        view.banner(state)
+        view.sensors(sim)
+    view.cars(sim, [(230, 60, 50)])
+    view.bar([track.name, f"{sim.time[0]:.2f} s", f"{sim.progress[0]:.0%}",
+              f"best {best:.2f} s" if best else "arrows to drive, R to restart"])
+    if not sim.live[0]:
+        view.banner("FINISHED" if sim.finished[0] else "CRASHED")
     view.flip(60)

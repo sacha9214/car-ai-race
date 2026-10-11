@@ -42,9 +42,10 @@ try:
                 if view.closed():
                     raise KeyboardInterrupt
                 view.track(track)
+                view.sensors(sim)
                 view.cars(sim, colors)
-                view.text([f"{ai.NAME}   generation {save['gen'] + 1}   {track.name}",
-                           f"{int(sim.live.sum())} of {sim.n} cars still running"])
+                view.bar([(ai.NAME, ai.COLOR), f"generation {save['gen'] + 1}", track.name,
+                          f"{int(sim.live.sum())} of {sim.n} cars running"])
                 view.flip()
             sim, scores = R.run(track, [(ai, brains)], on_frame=draw if view else None)
             total += scores

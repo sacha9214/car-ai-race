@@ -10,7 +10,7 @@ from . import sim as S
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DECIDE_EVERY = 2    # an AI picks its controls every 2 frames (30 times a second)
-TIME_LIMIT = 30.0   # seconds allowed per lap
+TIME_LIMIT = 60.0   # seconds allowed per track
 
 
 def load_ai(name):
@@ -54,17 +54,16 @@ def _control(v):
     return 0.0 if math.isnan(v) else max(-1.0, min(1.0, v))
 
 
-def run(track, teams, laps=1, on_frame=None):
+def run(track, teams, on_frame=None):
     """Drive every brain of every team on the track at the same time.
 
     teams is a list of (ai module, brains). on_frame(sim, frame) is called after each
     frame and can return False to stop early. Returns the Sim and one score per car.
     """
     n = sum(len(brains) for _, brains in teams)
-    sim = S.Sim(track, n, laps)
+    sim = S.Sim(track, n)
     steer, throttle = np.zeros(n), np.zeros(n)
-    limit = TIME_LIMIT * laps
-    for frame in range(int(limit / S.DT)):
+    for frame in range(int(TIME_LIMIT / S.DT)):
         if frame % DECIDE_EVERY == 0:
             sensors = sim.sense().tolist()
             speeds = (sim.speed / S.MAX_SPEED).tolist()
@@ -81,5 +80,5 @@ def run(track, teams, laps=1, on_frame=None):
             break
         if not sim.live.any():
             break
-    scores = 1000 * sim.progress + np.where(sim.finished, 1000 * (1 - sim.time / limit), 0)
+    scores = 1000 * sim.progress + np.where(sim.finished, 1000 * (1 - sim.time / TIME_LIMIT), 0)
     return sim, scores.tolist()

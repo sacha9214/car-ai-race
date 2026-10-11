@@ -20,10 +20,10 @@ _LOOKAHEAD = np.arange(13)
 
 
 class Sim:
-    def __init__(self, track, n, laps=1):
+    def __init__(self, track, n):
         self.track = track
         self.n = n
-        self.goal = track.n * laps
+        self.goal = track.n - 3   # centerline points to pass to reach the finish line
         x, y, a = track.start
         self.x = np.full(n, x)
         self.y = np.full(n, y)
@@ -42,7 +42,7 @@ class Sim:
 
     @property
     def progress(self):
-        """Fraction of the race done, 0 to 1."""
+        """Fraction of the track done, 0 to 1."""
         return np.minimum(self.prog / self.goal, 1.0)
 
     def corners(self, i):
@@ -90,9 +90,9 @@ class Sim:
         crashed = ~self.track.road[cy.astype(int), cx.astype(int)].all(axis=1)
 
         # Progress only counts forward: look for the closest centerline point just ahead.
-        ahead = self.track.center[(self._idx[m, None] + _LOOKAHEAD) % self.track.n]
+        ahead = self.track.center[np.minimum(self._idx[m, None] + _LOOKAHEAD, self.track.n - 1)]
         gain = ((ahead[:, :, 0] - x[:, None]) ** 2 + (ahead[:, :, 1] - y[:, None]) ** 2).argmin(axis=1)
-        self._idx[m] = (self._idx[m] + gain) % self.track.n
+        self._idx[m] += gain
         self.prog[m] += gain
         self._last_gain[m] = np.where(gain > 0, time, self._last_gain[m])
         stalled = time - self._last_gain[m] > STALL_TIME

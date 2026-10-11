@@ -35,7 +35,7 @@ def evolve(brains, scores):
     """Called at the end of every generation. Return the brains of the next one.
 
     scores[i] is how well brains[i] did, summed over the training tracks.
-    Per track: 1000 x the fraction of the lap completed, plus up to 1000 more
-    for finishing the lap (the faster the lap, the bigger the bonus).
+    Per track: 1000 x the fraction of the track completed, plus up to 1000 more
+    for reaching the finish line (the faster, the bigger the bonus).
     """
     return brains

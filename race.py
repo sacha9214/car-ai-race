@@ -1,6 +1,6 @@
-"""Race the trained champions: python race.py <name> <name> ... [--track gauntlet | --seed 42] [--laps 1]
+"""Race the trained champions: python race.py <name> <name> ... [--track gauntlet | --seed 42]
 
-Each AI enters the best brain from its saves/<name>.pkl. First across the line wins;
+Each AI enters the best brain from its saves/<name>.pkl. First to the finish line wins;
 if nobody finishes, the car that got furthest wins.
 """
 import argparse
@@ -13,7 +13,6 @@ p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
 p.add_argument("names", nargs="+")
 p.add_argument("--track", default=T.FINAL, help=f"one of {', '.join(T.SPECS)}")
 p.add_argument("--seed", type=int, help="race on a random track instead (same seed, same track)")
-p.add_argument("--laps", type=int, default=1)
 p.add_argument("--headless", action="store_true", help="no window, just print the result")
 args = p.parse_args()
 
@@ -43,14 +42,14 @@ if not args.headless:
     import pygame
     from game import sim as S
     from game.render import View
-    view = View(f"Car AI Race: {track.name}")
+    view = View("THE RACE")
     colors = [ai.COLOR for ai in ais]
 
     def board(sim):
         view.track(track)
         view.cars(sim, colors)
-        view.text([(f"{pos}. {ais[i].NAME}   {status(sim, i)}", ais[i].COLOR)
-                   for pos, i in enumerate(standings(sim), 1)])
+        view.bar([(f"{pos}. {ais[i].NAME} {status(sim, i)}", ais[i].COLOR)
+                  for pos, i in enumerate(standings(sim), 1)])
 
     def draw(sim, frame):
         if view.closed():
@@ -59,7 +58,7 @@ if not args.headless:
         view.flip(60)
 
     grid = S.Sim(track, len(ais))
-    for count in ("3", "2", "1", "GO"):
+    for count in ("3", "2", "1", "GO!"):
         for _ in range(45):
             if view.closed():
                 raise SystemExit
@@ -67,9 +66,9 @@ if not args.headless:
             view.banner(count)
             view.flip(60)
 
-sim, _ = R.run(track, teams, laps=args.laps, on_frame=draw if view else None)
+sim, _ = R.run(track, teams, on_frame=draw if view else None)
 order = standings(sim)
-print(f"Track: {track.name}, {args.laps} lap(s)")
+print(f"Track: {track.name}")
 for pos, i in enumerate(order, 1):
     print(f"{pos}. {ais[i].NAME:16s} {status(sim, i)}")
 

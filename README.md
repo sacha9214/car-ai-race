@@ -38,7 +38,7 @@ nothing else. The template explains every value.
 ```
 
 Add `--watch` to see the cars learn, `--fresh` to start over. Training runs on four
-tracks (`oval`, `bean`, `wiggle`, `clover`), saves after every generation and resumes
+tracks, each with its own kind of obstacle, saves after every generation and resumes
 where it stopped. The best brain ever seen is kept as your champion in `saves/yourname.pkl`.
 
 ## Race
@@ -47,19 +47,34 @@ where it stopped. The best brain ever seen is kept as your champion in `saves/yo
 .venv/bin/python race.py yourname friendname
 ```
 
-The race runs on `gauntlet`, a harder track with an obstacle that is not part of training.
+The race runs on `gauntlet`, which is not part of training.
 For neutral ground, pick a number together on race day and use a random track:
 
 ```bash
-.venv/bin/python race.py yourname friendname --seed 42 --laps 3
+.venv/bin/python race.py yourname friendname --seed 42
 ```
 
-First across the line wins. If nobody finishes, the car that got furthest wins.
+First to the finish line wins. If nobody finishes, the car that got furthest wins.
 The simulation is deterministic and cars never touch each other, so the result
 depends only on the two AIs.
 
 To race a friend, they send you `ais/<theirname>.py` and `saves/<theirname>.pkl`.
 Both files run code on your machine, so only accept them from someone you trust.
+
+## Tracks
+
+Every track is a road that winds from a start line to a finish line.
+
+| Track | Used for | Obstacles |
+|---|---|---|
+| `pillars` | training | round pillars to slalom between |
+| `chicane` | training | blocks sticking out of alternate walls |
+| `pinch` | training | bottlenecks where the road narrows, plus bends |
+| `split` | training | islands that fork the road in two |
+| `gauntlet` | the race | a mix of all four on a tight, twisty road |
+
+Drive any of them yourself with `play.py <track>`. To add or change a track, edit `SPECS`
+in `game/track.py`.
 
 ## Suggested rules
 
@@ -71,4 +86,4 @@ Both files run code on your machine, so only accept them from someone you trust.
 
 Top speed 420 px/s. Steering turns the car at up to 3.2 rad/s whatever the speed, so
 the faster you go the wider you turn: tight corners need braking. Touching a wall, or
-making no progress for 2.5 seconds, takes the car out. Each lap has a 30 second limit.
+making no progress for 2.5 seconds, takes the car out. Each track has a 60 second limit.
