@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car AI Race: best runs</title>
+<style>
+  :root { --bg: #08081a; --panel: #12122a; --line: #26264a; --text: #f2f2f7; --dim: #9a9ab8;
+          --salmon: #ed7d76; --red: #ee543e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.4 "Arial Rounded MT Bold", "Avenir Next", system-ui, sans-serif; }
+  main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 28px 0 10px; }
+  .sub { color: var(--dim); margin: 0 0 18px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  button { font: inherit; color: var(--text); background: var(--panel); border: 2px solid var(--line);
+           border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+  button:hover { border-color: var(--dim); }
+  button.on { background: var(--salmon); border-color: var(--salmon); color: #1a0806; }
+  button.on.race { background: var(--red); border-color: var(--red); }
+  .tag { font-size: 12px; opacity: .75; margin-left: 6px; }
+  canvas { display: block; width: 100%; height: auto; border-radius: 14px; background: #000; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0 0; }
+  .controls input[type=range] { flex: 1 1 220px; accent-color: var(--salmon); }
+  .clock { min-width: 86px; text-align: right; font-variant-numeric: tabular-nums; }
+  label { color: var(--dim); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border-radius: 14px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  th { color: var(--dim); font-weight: normal; font-size: 14px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.pick { cursor: pointer; }
+  th.pick:hover { color: var(--text); }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; }
+  .best { color: #ffe83c; }
+  .out { color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Car AI Race: best runs</h1>
+  <p class="sub">Each trained AI's champion, replayed on every track. Run <code>replays.py</code> again to refresh.</p>
+
+  <div class="tabs" id="tabs"></div>
+  <canvas id="view" width="1280" height="720"></canvas>
+  <div class="controls">
+    <button id="play">Pause</button>
+    <button id="restart">Restart</button>
+    <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Position in the replay">
+    <span class="clock" id="clock">0.00 s</span>
+    <button class="speed" data-speed="0.5">0.5x</button>
+    <button class="speed on" data-speed="1">1x</button>
+    <button class="speed" data-speed="2">2x</button>
+    <label><input type="checkbox" id="trail" checked> Trail</label>
+  </div>
+
+  <h2 id="boardTitle"></h2>
+  <div class="scroll"><table id="board"></table></div>
+
+  <h2>All tracks</h2>
+  <div class="scroll"><table id="all"></table></div>
+</main>
+
+<script src="runs.js"></script>
+<script>
+const canvas = document.getElementById("view"), ctx = canvas.getContext("2d");
+const ais = Object.fromEntries(DATA.ais.map(a => [a.id, a]));
+const css = a => `rgb(${a.color.join(",")})`;
+const image = src => Object.assign(new Image(), {src});
+for (const a of DATA.ais) a.sprite = image(`img/car_${a.id}.png`);
+for (const t of DATA.tracks) {
+  t.image = image(`img/${t.name}.png`);
+  t.frames = Math.max(...t.runs.map(r => r.path.length / 3)) - 1;
+  // Finishers by time, then everyone else by how far they got.
+  t.ranking = [...t.runs].sort((a, b) => (b.finished - a.finished) || (a.finished ? a.time - b.time : b.progress - a.progress));
+}
+
+let track = DATA.tracks.find(t => t.race) || DATA.tracks[0];
+let frame = 0, playing = true, speed = 1, last = null;
+
+const result = r => r.finished ? r.time.toFixed(2) + " s" : Math.round(r.progress * 100) + "% crashed";
+
+function pose(run, f) {
+  const n = run.path.length / 3, i = Math.min(Math.floor(f), n - 1), j = Math.min(i + 1, n - 1), k = Math.min(f - i, 1);
+  const p = run.path, turn = Math.atan2(Math.sin(p[j*3+2] - p[i*3+2]), Math.cos(p[j*3+2] - p[i*3+2]));
+  return {x: p[i*3] + (p[j*3] - p[i*3]) * k, y: p[i*3+1] + (p[j*3+1] - p[i*3+1]) * k, a: p[i*3+2] + turn * k, done: f >= n - 1};
+}
+
+function draw() {
+  ctx.globalAlpha = 1;
+  ctx.drawImage(track.image, 0, 0);
+  const trail = document.getElementById("trail").checked;
+  // Slowest first so the leader is drawn on top.
+  for (const run of [...track.ranking].reverse()) {
+    const ai = ais[run.ai], now = pose(run, frame), out = now.done && !run.finished;
+    if (trail) {
+      ctx.strokeStyle = css(ai); ctx.lineWidth = 2; ctx.globalAlpha = 0.55; ctx.beginPath();
+      const upTo = Math.min(Math.floor(frame), run.path.length / 3 - 1);
+      for (let i = 0; i <= upTo; i++) ctx.lineTo(run.path[i*3], run.path[i*3+1]);
+      ctx.lineTo(now.x, now.y); ctx.stroke();
+    }
+    ctx.globalAlpha = out ? 0.45 : 1;
+    ctx.save(); ctx.translate(now.x, now.y); ctx.rotate(now.a);
+    ctx.drawImage(ai.sprite, -ai.sprite.width / 2, -ai.sprite.height / 2); ctx.restore();
+  }
+  document.getElementById("clock").textContent = (frame / DATA.fps).toFixed(2) + " s";
+  document.getElementById("seek").value = Math.round(frame / track.frames * 1000);
+}
+
+function tick(now) {
+  if (playing && last !== null) {
+    frame = Math.min(frame + (now - last) / 1000 * DATA.fps * speed, track.frames);
+    if (frame >= track.frames) setPlaying(false);
+  }
+  last = now;
+  draw();
+  requestAnimationFrame(tick);
+}
+
+function setPlaying(on) {
+  playing = on;
+  document.getElementById("play").textContent = on ? "Pause" : "Play";
+}
+
+function select(t) {
+  track = t; frame = 0; setPlaying(true);
+  for (const b of document.querySelectorAll("#tabs button")) b.classList.toggle("on", b.dataset.track === t.name);
+  document.getElementById("boardTitle").textContent = "Ranking on " + t.name;
+  document.getElementById("board").innerHTML = "<tr><th>#</th><th>AI</th><th class='num'>Result</th></tr>" +
+    t.ranking.map((r, i) => `<tr><td>${i + 1}</td><td><span class="dot" style="background:${css(ais[r.ai])}"></span>${ais[r.ai].name}</td>` +
+      `<td class="num ${r.finished ? "" : "out"}">${result(r)}</td></tr>`).join("");
+}
+
+document.getElementById("tabs").innerHTML = DATA.tracks.map(t =>
+  `<button data-track="${t.name}" class="${t.race ? "race" : ""}">${t.name}<span class="tag">${t.race ? "the race" : "training"}</span></button>`).join("");
+document.getElementById("all").innerHTML =
+  "<tr><th>AI</th>" + DATA.tracks.map(t => `<th class="num pick" data-track="${t.name}">${t.name}</th>`).join("") + "</tr>" +
+  DATA.ais.map(a => `<tr><td><span class="dot" style="background:${css(a)}"></span>${a.name}</td>` + DATA.tracks.map(t => {
+    const r = t.runs.find(r => r.ai === a.id), best = r.finished && t.ranking[0] === r;
+    return `<td class="num ${best ? "best" : r.finished ? "" : "out"}">${result(r)}</td>`;
+  }).join("") + "</tr>").join("");
+
+document.addEventListener("click", e => {
+  const pick = e.target.closest("[data-track]");
+  if (pick) select(DATA.tracks.find(t => t.name === pick.dataset.track));
+  const s = e.target.closest(".speed");
+  if (s) { speed = +s.dataset.speed; for (const b of document.querySelectorAll(".speed")) b.classList.toggle("on", b === s); }
+});
+document.getElementById("play").onclick = () => { if (!playing && frame >= track.frames) frame = 0; setPlaying(!playing); };
+document.getElementById("restart").onclick = () => { frame = 0; setPlaying(true); };
+document.getElementById("seek").oninput = e => { frame = e.target.value / 1000 * track.frames; setPlaying(false); };
+document.addEventListener("keydown", e => { if (e.code === "Space" && e.target.tagName !== "BUTTON") { e.preventDefault(); document.getElementById("play").click(); } });
+
+select(track);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

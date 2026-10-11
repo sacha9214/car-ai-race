@@ -61,6 +61,16 @@ depends only on the two AIs.
 To race a friend, they send you `ais/<theirname>.py` and `saves/<theirname>.pkl`.
 Both files run code on your machine, so only accept them from someone you trust.
 
+## Replays
+
+```bash
+.venv/bin/python replays.py
+```
+
+Records the champion of every trained AI on all five tracks and opens a page that replays
+the runs side by side, with a ranking per track. Run it again after more training, or after
+adding a friend's AI, to refresh the page.
+
 ## Tracks
 
 Every track is a road that winds from a start line to a finish line.

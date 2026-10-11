@@ -11,7 +11,7 @@ RAY, RAY_TIP = (255, 232, 60), (235, 50, 40)
 _ANGLES = 72  # car sprites are pre-rotated in 5° steps
 
 
-def _car_sprite(color):
+def car_sprite(color):
     """A little top-down car pointing right, drawn big then shrunk so it comes out smooth."""
     k = 6
     L, Wd = int(S.CAR_L) + 4, int(S.CAR_W) + 4
@@ -81,7 +81,7 @@ class View:
             key = (colors[i], bool(sim.alive[i]), step)
             if key not in self._sprites:
                 color = colors[i] if sim.alive[i] else tuple(c // 2 for c in colors[i])
-                self._sprites[key] = pygame.transform.rotate(_car_sprite(color), -step * 360 / _ANGLES)
+                self._sprites[key] = pygame.transform.rotate(car_sprite(color), -step * 360 / _ANGLES)
             img = self._sprites[key]
             self.screen.blit(img, (sim.x[i] - img.get_width() / 2, sim.y[i] - img.get_height() / 2))
 
