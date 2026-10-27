@@ -87,3 +87,7 @@ in `game/track.py`.
 Top speed 420 px/s. Steering turns the car at up to 3.2 rad/s whatever the speed, so
 the faster you go the wider you turn: tight corners need braking. Touching a wall, or
 making no progress for 2.5 seconds, takes the car out. Each track has a 60 second limit.
+
+## License
+
+[MIT](LICENSE)
